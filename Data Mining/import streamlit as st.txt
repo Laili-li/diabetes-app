@@ -1,0 +1,95 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
+from sklearn.preprocessing import StandardScaler
+
+# Konfigurasi halaman Streamlit
+st.set_page_config(page_title="Diabetes Classification & Clustering", layout="wide")
+
+st.title("Ujian Akhir Semester")
+st.subheader("Aplikasi Klasifikasi dan Clustering Data Diabetes")
+
+menu = st.sidebar.selectbox("Pilih Halaman", ["Klasifikasi", "Clustering"])
+
+# Load dataset dari Google Drive
+@st.cache_data
+def load_data():
+    url = "https://drive.google.com/uc?id=1QuDHd-pebfOY-DoyFACtMyK-_UyuMJP8"
+    data = pd.read_csv(url)
+    return data
+
+# Load dan normalisasi data
+data = load_data()
+scaler = StandardScaler()
+data_scaled = scaler.fit_transform(data[['x', 'y']])
+
+# -----------------------------
+# Halaman Klasifikasi
+# -----------------------------
+if menu == "Klasifikasi":
+    st.header("📊 Klasifikasi Diabetes")
+    st.markdown("""
+    Model klasifikasi dibuat untuk memprediksi apakah seorang pasien terkena diabetes berdasarkan data fitur tertentu.
+    """)
+
+    st.markdown("### Input Data Baru")
+    x_input = st.number_input("Nilai x", value=0.0)
+    y_input = st.number_input("Nilai y", value=0.0)
+
+    input_scaled = scaler.transform([[x_input, y_input]])
+    model = KMeans(n_clusters=5, random_state=42)
+    model.fit(data_scaled)
+    prediction = model.predict(input_scaled)
+
+    st.markdown("### Hasil Prediksi")
+    st.success(f"Data Anda diprediksi masuk dalam Cluster: {prediction[0]}")
+
+# -----------------------------
+# Halaman Clustering
+# -----------------------------
+elif menu == "Clustering":
+    st.header("🔍 Clustering Data")
+    st.markdown("""
+    Proses clustering dilakukan menggunakan tiga metode: **KMeans**, **Hierarchical Clustering**, dan **DBSCAN**.
+    """)
+
+    tab1, tab2, tab3 = st.tabs(["KMeans", "Hierarchical", "DBSCAN"])
+
+    with tab1:
+        st.subheader("KMeans Clustering")
+        kmeans = KMeans(n_clusters=5, random_state=42)
+        data['KMeans_Cluster'] = kmeans.fit_predict(data_scaled)
+        fig1, ax1 = plt.subplots()
+        sns.scatterplot(x=data['x'], y=data['y'], hue=data['KMeans_Cluster'], palette='viridis', ax=ax1)
+        ax1.set_title('KMeans Clustering')
+        st.pyplot(fig1)
+
+    with tab2:
+        st.subheader("Hierarchical Clustering")
+        hierarchical = AgglomerativeClustering(n_clusters=5)
+        data['Hierarchical_Cluster'] = hierarchical.fit_predict(data_scaled)
+        fig2, ax2 = plt.subplots()
+        sns.scatterplot(x=data['x'], y=data['y'], hue=data['Hierarchical_Cluster'], palette='viridis', ax=ax2)
+        ax2.set_title('Hierarchical Clustering')
+        st.pyplot(fig2)
+
+    with tab3:
+        st.subheader("DBSCAN Clustering")
+        dbscan = DBSCAN(eps=0.5, min_samples=5)
+        data['DBSCAN_Cluster'] = dbscan.fit_predict(data_scaled)
+        fig3, ax3 = plt.subplots()
+        sns.scatterplot(x=data['x'], y=data['y'], hue=data['DBSCAN_Cluster'], palette='viridis', ax=ax3)
+        ax3.set_title('DBSCAN Clustering')
+        st.pyplot(fig3)
+
+    st.markdown("### Input Data Baru untuk Clustering")
+    x_input = st.number_input("x baru", key='x_clust')
+    y_input = st.number_input("y baru", key='y_clust')
+
+    input_scaled = scaler.transform([[x_input, y_input]])
+    cluster_prediction = kmeans.predict(input_scaled)
+
+    st.success(f"Data baru ini termasuk dalam *Cluster: {cluster_prediction[0]}*")
